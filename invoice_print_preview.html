@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Invoice Print Preview — S Four Traders</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #d0d0d0; font-family: 'DM Sans', sans-serif; padding: 30px; }
+
+.preview-controls {
+  max-width: 780px; margin: 0 auto 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: #1a1a1a; padding: 12px 20px; border-radius: 10px;
+}
+.preview-controls span { color: #aaa; font-size: 13px; }
+.btn-print {
+  background: #c0272d; color: white; border: none; padding: 9px 22px;
+  border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-print:hover { background: #8b1a1f; }
+
+/* A4 Paper */
+.paper {
+  width: 780px; margin: 0 auto;
+  background: white;
+  box-shadow: 0 4px 40px rgba(0,0,0,0.25);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Header */
+.inv-header {
+  padding: 16px 24px 12px;
+  border-bottom: 2.5px solid #c0272d;
+}
+.header-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.company-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px; color: #c0272d; font-weight: 800; line-height: 1;
+}
+.company-addr { font-size: 11px; color: #555; margin-top: 4px; }
+.company-gstin {
+  font-size: 10px; color: #555; margin-top: 6px;
+  font-family: 'DM Mono', monospace;
+  background: #f4f4f4; padding: 3px 8px; border-radius: 3px; display: inline-block;
+}
+.inv-right { text-align: right; }
+.inv-phone { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+.copy-info { font-size: 10px; color: #666; line-height: 1.9; margin-top: 4px; }
+.inv-title-bar {
+  text-align: center; font-size: 12px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase;
+  background: #f4f4f4; padding: 6px; border-bottom: 1px solid #ddd;
+  color: #1a1a1a;
+}
+
+/* Meta Row */
+.meta-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #ddd;
+}
+.meta-left, .meta-right {
+  padding: 10px 16px; font-size: 11px; color: #333;
+}
+.meta-left { border-right: 1px solid #ddd; }
+.meta-field { display: flex; gap: 6px; margin-bottom: 4px; align-items: baseline; }
+.meta-field label { font-weight: 700; white-space: nowrap; color: #555; min-width: 90px; font-size: 10px; }
+.meta-field span { color: #1a1a1a; font-size: 11px; border-bottom: 1px dotted #ccc; flex: 1; padding-bottom: 1px; }
+.inv-no-big { font-size: 22px; font-weight: 800; font-family: 'Playfair Display', serif; color: #1a1a1a; }
+
+/* Party Section */
+.party-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #ddd;
+}
+.party-box { padding: 10px 16px; font-size: 11px; }
+.party-box:first-child { border-right: 1px solid #ddd; }
+.party-head {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: #c0272d; margin-bottom: 8px;
+  padding-bottom: 4px; border-bottom: 1px solid #eee;
+}
+.party-field { display: flex; gap: 6px; margin-bottom: 3px; }
+.party-field label { font-weight: 700; color: #666; min-width: 50px; font-size: 10px; }
+.party-field span { color: #1a1a1a; border-bottom: 1px dotted #ddd; flex: 1; }
+
+/* Items Table */
+.items-wrap { padding: 0; }
+table.inv-items {
+  width: 100%; border-collapse: collapse;
+}
+table.inv-items th {
+  background: #1a1a1a; color: white;
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.3px; padding: 7px 8px; text-align: center;
+  border: 1px solid #333;
+}
+table.inv-items td {
+  padding: 6px 8px; font-size: 11px; border: 1px solid #ddd;
+  vertical-align: middle; color: #1a1a1a;
+}
+table.inv-items td.desc { text-align: left; }
+table.inv-items td.num { text-align: right; font-family: 'DM Mono', monospace; }
+table.inv-items td.center { text-align: center; }
+table.inv-items tr.empty td { height: 22px; color: #ccc; }
+
+/* Totals + Words */
+.footer-grid {
+  display: grid; grid-template-columns: 1fr 260px;
+  border-top: 1px solid #ddd;
+}
+.words-side { padding: 12px 16px; border-right: 1px solid #ddd; }
+.words-label { font-size: 10px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+.words-val {
+  font-size: 11px; color: #1a1a1a; font-weight: 600;
+  background: #fdf6e3; border: 1px solid #e8d89a;
+  border-radius: 4px; padding: 8px 10px; min-height: 44px; line-height: 1.6;
+}
+.ewb-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 10px; }
+.ewb-row label { font-weight: 700; color: #555; white-space: nowrap; }
+.ewb-val { border-bottom: 1px dotted #aaa; flex: 1; font-family: 'DM Mono', monospace; font-size: 11px; padding-bottom: 1px; }
+
+.totals-side { font-size: 11px; }
+.t-row { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #eee; }
+.t-row.tax-row { background: #f9f9f9; }
+.t-row.grand { background: #1a1a1a; color: white; font-weight: 700; font-size: 12px; }
+.t-label { color: #666; }
+.t-row.grand .t-label { color: #ccc; }
+.t-val { font-family: 'DM Mono', monospace; font-weight: 600; }
+
+/* Sign row */
+.sign-row {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 12px 16px; border-top: 1px solid #ddd;
+}
+.terms-block { font-size: 9.5px; color: #666; line-height: 1.9; max-width: 380px; }
+.terms-block strong { font-size: 10px; font-weight: 700; display: block; margin-bottom: 3px; color: #333; }
+.sign-block { text-align: right; }
+.sign-cert { font-size: 9.5px; color: #666; }
+.sign-company { font-family: 'Playfair Display', serif; color: #c0272d; font-size: 17px; font-weight: 800; margin-top: 2px; }
+.sign-auth { font-size: 9.5px; color: #888; margin-top: 28px; border-top: 1px solid #ddd; padding-top: 3px; }
+
+/* PRINT STYLES */
+@media print {
+  body { background: white; padding: 0; }
+  .preview-controls { display: none; }
+  .paper { box-shadow: none; border-radius: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="preview-controls">
+  <span>🖨 Print Preview — S Four Traders Invoice</span>
+  <button class="btn-print" onclick="window.print()">Print / Save PDF</button>
+</div>
+
+<div class="paper">
+
+  <!-- HEADER -->
+  <div class="inv-header">
+    <div class="header-top">
+      <div>
+        <div class="company-name">S Four Traders</div>
+        <div class="company-addr">Opp. Vardhman Refractory, Shamli Bypass Road, Muzaffarnagar (U.P.)</div>
+        <div class="company-gstin">GSTIN: 09AGOPA6566D2Z9 &nbsp;|&nbsp; State: U.P. &nbsp;|&nbsp; State Code: 09</div>
+      </div>
+      <div class="inv-right">
+        <div class="inv-phone">📞 8279444622</div>
+        
+      </div>
+    </div>
+  </div>
+  <div class="inv-title-bar">TAX INVOICE</div>
+
+  <!-- META INFO -->
+  <div class="meta-row">
+    <div class="meta-left">
+      <div class="meta-field">
+        <label>Invoice No.</label>
+        <span class="inv-no-big">INV-2025-003</span>
+      </div>
+      <div class="meta-field">
+        <label>Invoice Date</label>
+        <span>27-03-2025</span>
+      </div>
+      <div class="meta-field">
+        <label>Reverse Charge</label>
+        <span>No</span>
+      </div>
+    </div>
+    <div class="meta-right">
+      <div class="meta-field">
+        <label>Vehicle No.</label>
+        <span>UP14CD-3712</span>
+      </div>
+      <div class="meta-field">
+        <label>Date &amp; Time of Supply</label>
+        <span>27-03-2025, 10:30 AM</span>
+      </div>
+      <div class="meta-field">
+        <label>Place of Supply</label>
+        <span>Dehradun, Uttarakhand</span>
+      </div>
+      <div class="meta-field">
+        <label>Transport Mode</label>
+        <span>Road</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PARTY DETAILS -->
+  <div class="party-row">
+    <div class="party-box">
+      <div class="party-head">Details of Receiver / Billed To</div>
+      <div class="party-field"><label>Name</label><span>Hamidur Traders</span></div>
+      <div class="party-field"><label>Address</label><span>Mahmoodpur, Shahbadpur, Moradabad</span></div>
+      <div class="party-field"><label>State</label><span>Uttar Pradesh</span></div>
+      <div class="party-field"><label>State Code</label><span>09</span></div>
+      <div class="party-field"><label>GSTIN</label><span>09ABCDE1234F1Z5</span></div>
+    </div>
+    <div class="party-box">
+      <div class="party-head">Details of Consignee / Shipped To</div>
+      <div class="party-field"><label>Name</label><span>Hamidur Traders</span></div>
+      <div class="party-field"><label>Address</label><span>Dehradun Warehouse, Near Bus Stand</span></div>
+      <div class="party-field"><label>State</label><span>Uttarakhand</span></div>
+      <div class="party-field"><label>State Code</label><span>05</span></div>
+      <div class="party-field"><label>GSTIN</label><span>—</span></div>
+    </div>
+  </div>
+
+  <!-- ITEMS TABLE -->
+  <div class="items-wrap">
+    <table class="inv-items">
+      <thead>
+        <tr>
+          <th style="width:32px">S.No</th>
+          <th>Description of Goods</th>
+          <th style="width:64px">HSN Code</th>
+          <th style="width:48px">UOM</th>
+          <th style="width:52px">Qty</th>
+          <th style="width:72px">Rate</th>
+          <th style="width:88px">Value of Goods</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center">1</td>
+          <td class="desc">TMT Bar 12 mm</td>
+          <td class="center">7214</td>
+          <td class="center">Nos</td>
+          <td class="num">2045</td>
+          <td class="num">47.00</td>
+          <td class="num">96,115.00</td>
+        </tr>
+        <tr>
+          <td class="center">2</td>
+          <td class="desc">TMT Bar 10 mm</td>
+          <td class="center">7214</td>
+          <td class="center">Nos</td>
+          <td class="num">5750</td>
+          <td class="num">49.00</td>
+          <td class="num">2,81,750.00</td>
+        </tr>
+        <tr>
+          <td class="center">3</td>
+          <td class="desc">TMT Bar 8 mm</td>
+          <td class="center">7214</td>
+          <td class="center">Nos</td>
+          <td class="num">3670</td>
+          <td class="num">52.00</td>
+          <td class="num">1,90,840.00</td>
+        </tr>
+        <tr class="empty"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="empty"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="empty"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="empty"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr class="empty"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr>
+          <td colspan="5" style="text-align:right;font-weight:700;font-size:10px;color:#555;padding-right:12px">TOTAL QTY: 11,465</td>
+          <td style="text-align:right;font-weight:700;font-size:10px;color:#555">Total</td>
+          <td class="num" style="font-weight:700">5,68,705.00</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER: WORDS + TOTALS -->
+  <div class="footer-grid">
+    <div class="words-side">
+      <div class="words-label">Total Invoice Amount in Words</div>
+      <div class="words-val">Six Lakh Two Thousand Six Hundred Ninety Two Rupees Only</div>
+      <div class="ewb-row">
+        <label>E-Way Bill No. :</label>
+        <span class="ewb-val">401506820255</span>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:#888">
+        Amount of Tax Subject to Reverse Charge: —
+      </div>
+    </div>
+    <div class="totals-side">
+      <div class="t-row">
+        <span class="t-label">Total</span>
+        <span class="t-val">₹5,68,705.00</span>
+      </div>
+      <div class="t-row tax-row">
+        <span class="t-label">SGST @ 0%</span>
+        <span class="t-val">₹0.00</span>
+      </div>
+      <div class="t-row tax-row">
+        <span class="t-label">CGST @ 0%</span>
+        <span class="t-val">₹0.00</span>
+      </div>
+      <div class="t-row tax-row">
+        <span class="t-label">IGST @ 5.98%</span>
+        <span class="t-val">₹34,009.00</span>
+      </div>
+      <div class="t-row">
+        <span class="t-label">Freight Charges</span>
+        <span class="t-val">₹0.00</span>
+      </div>
+      <div class="t-row grand">
+        <span class="t-label">Grand Total</span>
+        <span class="t-val">₹6,02,714.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNATURE ROW -->
+  <div class="sign-row">
+    <div class="terms-block">
+      <strong>Terms &amp; Conditions</strong>
+      • Goods once sold will not be taken back.<br/>
+      • All Disputes Subject to Muzaffarnagar Jurisdiction Only.<br/>
+      • E &amp; O.E.
+    </div>
+    <div class="sign-block">
+      <div class="sign-cert">Certified that the particulars given above are true &amp; correct.</div>
+      <div class="sign-company">For S Four Traders</div>
+      <div class="sign-auth">Prop. / Auth. Signatory</div>
+    </div>
+  </div>
+
+</div><!-- end paper -->
+
+</body>
+</html>
