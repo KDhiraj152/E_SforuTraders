@@ -1,0 +1,54 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Backend
+invoice-backend/target/
+invoice-backend/out/
+invoice-backend/.mvn/wrapper/maven-wrapper.jar
+
+#  Frontend
+invoice-frontend/node_modules/
+invoice-frontend/dist/
+invoice-frontend/build/
+invoice-frontend/.env.local
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+
+# Gradle
+.gradle/
+build/
+
+# Maven
+*.pom
+pom.xml.tag
+
+# misc
+.cache/
+.temp/
+temp/
