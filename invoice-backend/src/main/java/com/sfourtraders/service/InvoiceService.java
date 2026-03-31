@@ -1,7 +1,6 @@
 package com.sfourtraders.service;
 
 import com.sfourtraders.api.dto.invoice.InvoiceRequest;
-import com.sfourtraders.api.dto.invoice.InvoiceItemRequest;
 import com.sfourtraders.api.dto.invoice.InvoiceResponse;
 import com.sfourtraders.api.dto.invoice.InvoiceItemResponse;
 import com.sfourtraders.domain.invoice.service.InvoiceCalculationService;
@@ -12,18 +11,17 @@ import com.sfourtraders.model.InvoiceItem;
 import com.sfourtraders.repository.InvoiceRepository;
 import com.sfourtraders.shared.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 /**
  * Refactored Invoice Service with proper architecture and error handling
@@ -33,15 +31,24 @@ import java.util.stream.Collectors;
 public class InvoiceService {
     private static final Logger logger = ApplicationLogger.getLogger(InvoiceService.class);
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ISO_DATE;
+    private static final String INVOICE_ENTITY = "Invoice";
+    private static final String INVOICE_LABEL_PREFIX = "Invoice #";
 
-    @Autowired
-    private InvoiceRepository invoiceRepository;
+    private final InvoiceRepository invoiceRepository;
 
-    @Autowired
-    private InvoiceCalculationService calculationService;
+    private final InvoiceCalculationService calculationService;
 
-    @Autowired
-    private InvoiceNumberService invoiceNumberService;
+    private final InvoiceNumberService invoiceNumberService;
+
+    public InvoiceService(
+            InvoiceRepository invoiceRepository,
+            InvoiceCalculationService calculationService,
+            InvoiceNumberService invoiceNumberService
+    ) {
+        this.invoiceRepository = invoiceRepository;
+        this.calculationService = calculationService;
+        this.invoiceNumberService = invoiceNumberService;
+    }
 
     /**
      * Get all invoices with pagination
@@ -58,10 +65,10 @@ public class InvoiceService {
      * Get invoice by ID
      */
     @Transactional(readOnly = true)
-    public InvoiceResponse getInvoiceById(Long id) {
+    public InvoiceResponse getInvoiceById(@NonNull Long id) {
         logger.debug("Fetching invoice with ID: {}", id);
         Invoice invoice = invoiceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice", id));
+                .orElseThrow(() -> new ResourceNotFoundException(INVOICE_ENTITY, id));
         return mapInvoiceToResponse(invoice);
     }
 
@@ -69,10 +76,10 @@ public class InvoiceService {
      * Get invoice entity by ID (for PDF generation and internal processing)
      */
     @Transactional(readOnly = true)
-    public Invoice getInvoiceEntityById(Long id) {
+    public Invoice getInvoiceEntityById(@NonNull Long id) {
         logger.debug("Fetching invoice entity with ID: {}", id);
         return invoiceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice", id));
+                .orElseThrow(() -> new ResourceNotFoundException(INVOICE_ENTITY, id));
     }
 
     /**
@@ -100,7 +107,7 @@ public class InvoiceService {
         updateInvoiceTotals(invoice);
 
         Invoice saved = invoiceRepository.save(invoice);
-        ApplicationLogger.logBusinessEvent(InvoiceService.class, "INVOICE_CREATED", "Invoice #" + saved.getInvoiceNo());
+        ApplicationLogger.logBusinessEvent(InvoiceService.class, "INVOICE_CREATED", INVOICE_LABEL_PREFIX + saved.getInvoiceNo());
 
         return mapInvoiceToResponse(saved);
     }
@@ -108,11 +115,11 @@ public class InvoiceService {
     /**
      * Update existing invoice
      */
-    public InvoiceResponse updateInvoice(Long id, InvoiceRequest request) {
+    public InvoiceResponse updateInvoice(@NonNull Long id, InvoiceRequest request) {
         logger.info("Updating invoice with ID: {}", id);
 
         Invoice invoice = invoiceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice", id));
+                .orElseThrow(() -> new ResourceNotFoundException(INVOICE_ENTITY, id));
 
         // Update fields
         updateInvoiceFields(invoice, request);
@@ -121,8 +128,8 @@ public class InvoiceService {
         calculationService.validateInvoiceData(invoice);
         updateInvoiceTotals(invoice);
 
-        Invoice updated = invoiceRepository.save(invoice);
-        ApplicationLogger.logBusinessEvent(InvoiceService.class, "INVOICE_UPDATED", "Invoice #" + updated.getInvoiceNo());
+        Invoice updated = invoiceRepository.save(Objects.requireNonNull(invoice, "invoice must not be null"));
+        ApplicationLogger.logBusinessEvent(InvoiceService.class, "INVOICE_UPDATED", INVOICE_LABEL_PREFIX + updated.getInvoiceNo());
 
         return mapInvoiceToResponse(updated);
     }
@@ -130,14 +137,14 @@ public class InvoiceService {
     /**
      * Delete invoice
      */
-    public void deleteInvoice(Long id) {
+    public void deleteInvoice(@NonNull Long id) {
         logger.info("Deleting invoice with ID: {}", id);
 
         Invoice invoice = invoiceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice", id));
+                .orElseThrow(() -> new ResourceNotFoundException(INVOICE_ENTITY, id));
 
-        invoiceRepository.delete(invoice);
-        ApplicationLogger.logBusinessEvent(InvoiceService.class, "INVOICE_DELETED", "Invoice #" + invoice.getInvoiceNo());
+        invoiceRepository.delete(Objects.requireNonNull(invoice, "invoice must not be null"));
+        ApplicationLogger.logBusinessEvent(InvoiceService.class, "INVOICE_DELETED", INVOICE_LABEL_PREFIX + invoice.getInvoiceNo());
     }
 
     /**
@@ -146,10 +153,9 @@ public class InvoiceService {
     @Transactional(readOnly = true)
     public List<InvoiceResponse> searchByParty(String partyName) {
         logger.debug("Searching invoices by party: {}", partyName);
-        String searchTerm = "%" + partyName.toLowerCase() + "%";
         return invoiceRepository.findByBilledNameIgnoreCaseOrShippedNameIgnoreCase(partyName, partyName).stream()
                 .map(this::mapInvoiceToResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
@@ -160,13 +166,13 @@ public class InvoiceService {
         logger.debug("Fetching invoices between {} and {}", fromDate, toDate);
 
         try {
-            LocalDate from = LocalDate.parse(fromDate, dateFormatter);
-            LocalDate to = LocalDate.parse(toDate, dateFormatter);
+            LocalDate.parse(fromDate, dateFormatter);
+            LocalDate.parse(toDate, dateFormatter);
 
             List<Invoice> invoices = invoiceRepository.findByInvoiceDateBetween(fromDate, toDate);
             return invoices.stream()
                     .map(this::mapInvoiceToResponse)
-                    .collect(Collectors.toList());
+                    .toList();
 
         } catch (Exception ex) {
             logger.error("Error parsing date range: {}", ex.getMessage());
@@ -194,7 +200,7 @@ public class InvoiceService {
         Invoice invoice = new Invoice();
 
         invoice.setInvoiceDate(request.getInvoiceDate());
-        invoice.setReverseCharge(request.getReverseCharge() != null ? request.getReverseCharge() : false);
+        invoice.setReverseCharge(Boolean.TRUE.equals(request.getReverseCharge()));
         invoice.setVehicleNo(request.getVehicleNo());
         invoice.setSupplyDate(request.getSupplyDate());
         invoice.setPlaceOfSupply(request.getPlaceOfSupply());
@@ -236,7 +242,7 @@ public class InvoiceService {
                         item.setValue(itemReq.getQuantity() * itemReq.getRate());
                         return item;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
             invoice.setItems(items);
         }
 
@@ -290,7 +296,7 @@ public class InvoiceService {
                         item.setValue(itemReq.getQuantity() * itemReq.getRate());
                         return item;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
             invoice.setItems(items);
         }
     }
@@ -363,7 +369,7 @@ public class InvoiceService {
                         itemResp.setTaxRate(item.getTaxRate());
                         return itemResp;
                     })
-                    .collect(Collectors.toList()));
+                    .toList());
         }
 
         response.setCreatedAt(invoice.getCreatedAt());

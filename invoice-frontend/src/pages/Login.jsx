@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import API from '../api/client';
 
 export default function Login({ onLogin }) {
@@ -35,8 +36,9 @@ export default function Login({ onLogin }) {
         </div>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>User ID</label>
+          <label htmlFor="login-username" style={styles.label}>User ID</label>
           <input
+            id="login-username"
             style={styles.input}
             type="text"
             placeholder="Enter your ID"
@@ -47,8 +49,9 @@ export default function Login({ onLogin }) {
         </div>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>Password</label>
+          <label htmlFor="login-password" style={styles.label}>Password</label>
           <input
+            id="login-password"
             style={styles.input}
             type="password"
             placeholder="Enter password"
@@ -71,6 +74,10 @@ export default function Login({ onLogin }) {
     </div>
   );
 }
+
+Login.propTypes = {
+  onLogin: PropTypes.func.isRequired,
+};
 
 const styles = {
   page: {

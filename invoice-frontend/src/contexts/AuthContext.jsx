@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * Authentication context for global auth state management
@@ -56,16 +57,19 @@ export const AuthProvider = ({ children }) => {
     setError(null);
   }, []);
 
-  const value = {
-    isAuthenticated,
-    token,
-    user,
-    loading,
-    error,
-    login,
-    logout,
-    setError,
-  };
+  const value = useMemo(
+    () => ({
+      isAuthenticated,
+      token,
+      user,
+      loading,
+      error,
+      login,
+      logout,
+      setError,
+    }),
+    [isAuthenticated, token, user, loading, error, login, logout]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
@@ -76,4 +80,8 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
+};
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 };

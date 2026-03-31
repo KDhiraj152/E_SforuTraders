@@ -4,6 +4,7 @@ import com.sfourtraders.infrastructure.logging.ApplicationLogger;
 import com.sfourtraders.shared.exception.AuthenticationException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -38,17 +39,12 @@ public class JwtUtil {
      * Generate JWT token with username
      */
     public String generateToken(String username) {
-        try {
-            return Jwts.builder()
-                    .setSubject(username)
-                    .setIssuedAt(new Date())
-                    .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                    .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                    .compact();
-        } catch (Exception e) {
-            logger.error("Error generating JWT token for user: {}", username, e);
-            throw new RuntimeException("Failed to generate token", e);
-        }
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
     /**
@@ -63,16 +59,16 @@ public class JwtUtil {
                     .getBody()
                     .getSubject();
         } catch (ExpiredJwtException e) {
-            logger.debug("Token expired: {}", e.getMessage());
+            logger.debug("Token expired: {}", e.getMessage(), e);
             throw new AuthenticationException.TokenExpired();
         } catch (SignatureException e) {
-            logger.debug("Invalid token signature: {}", e.getMessage());
+            logger.debug("Invalid token signature: {}", e.getMessage(), e);
             throw new AuthenticationException.InvalidToken();
         } catch (MalformedJwtException e) {
-            logger.debug("Malformed JWT: {}", e.getMessage());
+            logger.debug("Malformed JWT: {}", e.getMessage(), e);
             throw new AuthenticationException.InvalidToken();
         } catch (JwtException e) {
-            logger.debug("JWT parsing error: {}", e.getMessage());
+            logger.debug("JWT parsing error: {}", e.getMessage(), e);
             throw new AuthenticationException.InvalidToken();
         }
     }
@@ -88,10 +84,10 @@ public class JwtUtil {
                     .parseClaimsJws(token);
             return true;
         } catch (ExpiredJwtException e) {
-            logger.debug("Token expired: {}", e.getMessage());
+            logger.debug("Token expired: {}", e.getMessage(), e);
             throw new AuthenticationException.TokenExpired();
         } catch (JwtException e) {
-            logger.debug("Invalid token: {}", e.getMessage());
+            logger.debug("Invalid token: {}", e.getMessage(), e);
             throw new AuthenticationException.InvalidToken();
         }
     }
@@ -101,14 +97,15 @@ public class JwtUtil {
      */
     public boolean isTokenExpired(String token) {
         try {
-            Date expiration = Jwts.parserBuilder()
+            Date tokenExpiration = Jwts.parserBuilder()
                     .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(token)
                     .getBody()
                     .getExpiration();
-            return expiration.before(new Date());
+            return tokenExpiration.before(new Date());
         } catch (JwtException e) {
+            logger.debug("Unable to evaluate token expiration: {}", e.getMessage(), e);
             return true;
         }
     }

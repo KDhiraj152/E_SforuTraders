@@ -14,10 +14,11 @@ export default function ExcelExport() {
       let url = '/api/invoices/excel';
       if (from && to) url += `?from=${from}&to=${to}`;
       const res = await API.get(url, { responseType: 'blob' });
-      const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
+      const blobUrl = globalThis.URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `SFourTraders_Invoices${from ? `_${from}_to_${to}` : ''}.xlsx`;
+      const dateSuffix = from ? `_${from}_to_${to}` : '';
+      a.download = `SFourTraders_Invoices${dateSuffix}.xlsx`;
       a.click();
       setMsg('✅ Excel downloaded successfully!');
     } catch {
@@ -34,12 +35,12 @@ export default function ExcelExport() {
         <h3 style={{ marginBottom: '20px', fontSize: '16px' }}>📊 Download Invoice Data</h3>
         <div style={styles.dateRow}>
           <div>
-            <label style={styles.label}>From Date</label>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={styles.input} />
+            <label htmlFor="export-from-date" style={styles.label}>From Date</label>
+            <input id="export-from-date" type="date" value={from} onChange={e => setFrom(e.target.value)} style={styles.input} />
           </div>
           <div>
-            <label style={styles.label}>To Date</label>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} style={styles.input} />
+            <label htmlFor="export-to-date" style={styles.label}>To Date</label>
+            <input id="export-to-date" type="date" value={to} onChange={e => setTo(e.target.value)} style={styles.input} />
           </div>
         </div>
         <p style={{ fontSize: '12px', color: '#888', marginBottom: '16px' }}>

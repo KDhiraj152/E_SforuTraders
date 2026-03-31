@@ -28,6 +28,7 @@ public class InvoiceItem {
     private Double value = 0.0;
 
     public InvoiceItem() {
+        // Required by JPA for entity instantiation.
     }
 
     public Long getId() {
@@ -71,7 +72,7 @@ public class InvoiceItem {
     }
 
     public String getHsn() {
-        return hsnCode;
+        return this.hsnCode == null ? null : this.hsnCode;
     }
 
     public void setHsn(String hsn) {

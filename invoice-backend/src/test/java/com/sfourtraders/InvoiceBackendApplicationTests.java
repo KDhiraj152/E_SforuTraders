@@ -10,6 +10,7 @@ class InvoiceBackendApplicationTests {
 
 	@Test
 	void contextLoads() {
+		// Verifies that the Spring application context boots successfully.
 	}
 
 }

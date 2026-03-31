@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import API from '../api/client';
 
 const STATE_CODES = {
@@ -119,8 +120,8 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
     const updated = [...items];
     updated[idx] = { ...updated[idx], [field]: val };
     if (field === 'quantity' || field === 'rate') {
-      const qty = parseFloat(field === 'quantity' ? val : updated[idx].quantity) || 0;
-      const rate = parseFloat(field === 'rate' ? val : updated[idx].rate) || 0;
+      const qty = Number.parseFloat(field === 'quantity' ? val : updated[idx].quantity) || 0;
+      const rate = Number.parseFloat(field === 'rate' ? val : updated[idx].rate) || 0;
       updated[idx].value = qty * rate;
     }
     setItems(updated);
@@ -129,11 +130,11 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
   const addItem = () => setItems([...items, emptyItem()]);
   const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
 
-  const subtotal = items.reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
-  const sgstAmt = subtotal * (parseFloat(sgstRate) || 0) / 100;
-  const cgstAmt = subtotal * (parseFloat(cgstRate) || 0) / 100;
-  const igstAmt = subtotal * (parseFloat(igstRate) || 0) / 100;
-  const grandTotal = subtotal + sgstAmt + cgstAmt + igstAmt + (parseFloat(freight) || 0);
+  const subtotal = items.reduce((s, i) => s + (Number.parseFloat(i.value) || 0), 0);
+  const sgstAmt = subtotal * (Number.parseFloat(sgstRate) || 0) / 100;
+  const cgstAmt = subtotal * (Number.parseFloat(cgstRate) || 0) / 100;
+  const igstAmt = subtotal * (Number.parseFloat(igstRate) || 0) / 100;
+  const grandTotal = subtotal + sgstAmt + cgstAmt + igstAmt + (Number.parseFloat(freight) || 0);
   const setGST = (c, ss, i) => { setCgstRate(c); setSgstRate(ss); setIgstRate(i); };
 
   const numberToWords = (n) => {
@@ -158,12 +159,12 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
       invoiceNo, invoiceDate, reverseCharge, vehicleNo, supplyDate, placeOfSupply,
       billedName, billedAddr, billedPin, billedCity, billedState, billedStateCode, billedGstin,
       shippedName, shippedAddr, shippedPin, shippedCity, shippedState, shippedStateCode, shippedGstin,
-      sgstRate: parseFloat(sgstRate)||0, cgstRate: parseFloat(cgstRate)||0,
-      igstRate: parseFloat(igstRate)||0, freight: parseFloat(freight)||0, ewbNo,
+      sgstRate: Number.parseFloat(sgstRate)||0, cgstRate: Number.parseFloat(cgstRate)||0,
+      igstRate: Number.parseFloat(igstRate)||0, freight: Number.parseFloat(freight)||0, ewbNo,
       items: items.filter(i => i.description).map((item, idx) => ({
         sno: idx+1, description: item.description||'', hsnCode: item.hsnCode||'',
-        uom: item.uom||'', quantity: parseFloat(item.quantity)||0,
-        rate: parseFloat(item.rate)||0, value: parseFloat(item.value)||0,
+        uom: item.uom||'', quantity: Number.parseFloat(item.quantity)||0,
+        rate: Number.parseFloat(item.rate)||0, value: Number.parseFloat(item.value)||0,
       })),
     };
     try {
@@ -174,6 +175,13 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
       setSaveError('Error: ' + (err.response?.data?.message || err.response?.data || err.message || 'Check console F12'));
     } finally { setSaving(false); }
   };
+
+  let saveButtonText = '💾 Save Invoice';
+  if (saving) {
+    saveButtonText = 'Saving...';
+  } else if (editInvoice) {
+    saveButtonText = '💾 Update';
+  }
 
   return (
     <>
@@ -330,7 +338,7 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
               </label>
             )},
           ].map((cell, i, arr) => (
-            <div key={i} className="inv-meta-cell" style={{ flex:1, padding:'8px 10px', borderRight: i < arr.length-1 ? '1px solid #e0e0e0' : 'none' }}>
+            <div key={cell.label} className="inv-meta-cell" style={{ flex:1, padding:'8px 10px', borderRight: i < arr.length-1 ? '1px solid #e0e0e0' : 'none' }}>
               <div className="inv-field-label" style={{ fontSize:'9px', fontWeight:'700', color:'#888', textTransform:'uppercase', letterSpacing:'0.3px', marginBottom:'3px' }}>{cell.label}</div>
               {cell.content}
             </div>
@@ -345,30 +353,33 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
               Details of Receiver / Billed To
             </div>
             <div style={{ position:'relative' }}>
-              <CF label="Name" value={billedName}
+              <CompactField label="Name" value={billedName}
                 onChange={e => { setBilledName(e.target.value); showSuggestions(e.target.value); }}
                 onBlur={() => setTimeout(() => setSuggestions([]), 200)} placeholder="Party Name" />
               {suggestions.length > 0 && (
                 <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'white', border:'1.5px solid #c0272d', borderRadius:'6px', zIndex:50, boxShadow:'0 4px 16px rgba(0,0,0,0.1)', maxHeight:'160px', overflowY:'auto' }}>
                   {suggestions.map(inv => (
-                    <div key={inv.id} style={{ padding:'7px 12px', cursor:'pointer', borderBottom:'1px solid #eee', fontSize:'12px' }}
+                    <button
+                      key={inv.id}
+                      type="button"
+                      style={{ width:'100%', textAlign:'left', padding:'7px 12px', cursor:'pointer', border:'none', borderBottom:'1px solid #eee', fontSize:'12px', background:'white' }}
                       onMouseDown={() => fillParty(inv)}>
                       <b>{inv.billedName}</b>
                       <span style={{ fontSize:'10px', color:'#888', fontFamily:'monospace' }}> {inv.billedGstin}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
             </div>
-            <CF label="Address" value={billedAddr} onChange={e => setBilledAddr(e.target.value)} />
+            <CompactField label="Address" value={billedAddr} onChange={e => setBilledAddr(e.target.value)} />
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
-              <CF label="Pincode" value={billedPin} onChange={e => { setBilledPin(e.target.value); fetchPincode(e.target.value,'billed'); }} maxLength={6} placeholder="6 digits" />
-              <CF label="City" value={billedCity} onChange={e => setBilledCity(e.target.value)} />
+              <CompactField label="Pincode" value={billedPin} onChange={e => { setBilledPin(e.target.value); fetchPincode(e.target.value,'billed'); }} maxLength={6} placeholder="6 digits" />
+              <CompactField label="City" value={billedCity} onChange={e => setBilledCity(e.target.value)} />
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'6px' }}>
-              <CF label="State" value={billedState} onChange={e => setBilledState(e.target.value)} />
-              <CF label="Code" value={billedStateCode} onChange={e => setBilledStateCode(e.target.value)} />
-              <CF label="GSTIN" value={billedGstin}
+              <CompactField label="State" value={billedState} onChange={e => setBilledState(e.target.value)} />
+              <CompactField label="Code" value={billedStateCode} onChange={e => setBilledStateCode(e.target.value)} />
+              <CompactField label="GSTIN" value={billedGstin}
                 onChange={e => { const v=e.target.value.toUpperCase(); setBilledGstin(v); if(v.length===15) decodeGstin(v,'billed'); }}
                 maxLength={15} placeholder="15 chars" />
             </div>
@@ -379,16 +390,16 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
             <div className="inv-section-title" style={{ fontSize:'9px', fontWeight:'800', color:'#c0272d', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px', paddingBottom:'4px', borderBottom:'1px solid #f0d0d0' }}>
               Details of Consignee / Shipped To
             </div>
-            <CF label="Name" value={shippedName} onChange={e => setShippedName(e.target.value)} placeholder="If different" />
-            <CF label="Address" value={shippedAddr} onChange={e => setShippedAddr(e.target.value)} />
+            <CompactField label="Name" value={shippedName} onChange={e => setShippedName(e.target.value)} placeholder="If different" />
+            <CompactField label="Address" value={shippedAddr} onChange={e => setShippedAddr(e.target.value)} />
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
-              <CF label="Pincode" value={shippedPin} onChange={e => { setShippedPin(e.target.value); fetchPincode(e.target.value,'shipped'); }} maxLength={6} placeholder="6 digits" />
-              <CF label="City" value={shippedCity} onChange={e => setShippedCity(e.target.value)} />
+              <CompactField label="Pincode" value={shippedPin} onChange={e => { setShippedPin(e.target.value); fetchPincode(e.target.value,'shipped'); }} maxLength={6} placeholder="6 digits" />
+              <CompactField label="City" value={shippedCity} onChange={e => setShippedCity(e.target.value)} />
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'6px' }}>
-              <CF label="State" value={shippedState} onChange={e => setShippedState(e.target.value)} />
-              <CF label="Code" value={shippedStateCode} onChange={e => setShippedStateCode(e.target.value)} />
-              <CF label="GSTIN" value={shippedGstin}
+              <CompactField label="State" value={shippedState} onChange={e => setShippedState(e.target.value)} />
+              <CompactField label="Code" value={shippedStateCode} onChange={e => setShippedStateCode(e.target.value)} />
+              <CompactField label="GSTIN" value={shippedGstin}
                 onChange={e => { const v=e.target.value.toUpperCase(); setShippedGstin(v); if(v.length===15) decodeGstin(v,'shipped'); }}
                 maxLength={15} placeholder="15 chars" />
             </div>
@@ -411,14 +422,14 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
         <table className="inv-table" style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
             <tr style={{ background:'#1a1a1a' }}>
-              {['S.No','Description of Goods','HSN Code','UOM','Qty','Rate (₹)','Value (₹)',''].map((h,i) => (
-                <th key={i} style={{ color:'white', fontSize:'10px', fontWeight:'700', textTransform:'uppercase', padding:'7px 6px', textAlign:'center', letterSpacing:'0.3px' }}>{h}</th>
+              {['S.No','Description of Goods','HSN Code','UOM','Qty','Rate (₹)','Value (₹)','actions'].map((h) => (
+                <th key={h} style={{ color:'white', fontSize:'10px', fontWeight:'700', textTransform:'uppercase', padding:'7px 6px', textAlign:'center', letterSpacing:'0.3px' }}>{h === 'actions' ? '' : h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {items.map((item, idx) => (
-              <tr key={idx} style={{ borderBottom:'1px solid #ececec', background: idx%2===0 ? 'white' : '#fafafa' }}>
+              <tr key={`${item.description}-${item.hsnCode}-${item.uom}-${idx}`} style={{ borderBottom:'1px solid #ececec', background: idx%2===0 ? 'white' : '#fafafa' }}>
                 <td style={{ padding:'4px 6px', textAlign:'center', color:'#aaa', fontSize:'11px', width:'36px' }}>{idx+1}</td>
                 <td style={{ padding:'4px 6px' }}>
                   <input style={{ width:'100%', border:'none', background:'transparent', fontSize:'12px', outline:'none', textAlign:'left' }}
@@ -441,7 +452,7 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
                     type="number" value={item.rate} onChange={e => updateItem(idx,'rate',e.target.value)} />
                 </td>
                 <td style={{ padding:'4px 6px', width:'90px', fontFamily:'monospace', textAlign:'right', fontWeight:'600', color:'#333' }}>
-                  {(parseFloat(item.value)||0).toFixed(2)}
+                  {(Number.parseFloat(item.value)||0).toFixed(2)}
                 </td>
                 <td style={{ padding:'4px 4px', width:'28px', textAlign:'center' }} className="no-print">
                   <button onClick={() => removeItem(idx)} style={{ background:'none', border:'none', cursor:'pointer', color:'#c0272d', fontSize:'16px', lineHeight:1 }}>×</button>
@@ -502,7 +513,7 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
               [`CGST @ ${cgstRate}%`, cgstAmt.toFixed(2)],
               [`IGST @ ${igstRate}%`, igstAmt.toFixed(2)],
             ].map(([label, val], i) => (
-              <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'5px 10px', fontSize:'11px', borderBottom:'1px solid #eee', background: i%2===0 ? 'white':'#fafafa' }}>
+              <div key={label} style={{ display:'flex', justifyContent:'space-between', padding:'5px 10px', fontSize:'11px', borderBottom:'1px solid #eee', background: i%2===0 ? 'white':'#fafafa' }}>
                 <span className="inv-total-label" style={{ color:'#555' }}>{label}</span>
                 <span className="inv-total-value" style={{ fontFamily:'monospace', fontWeight:'600' }}>₹{val}</span>
               </div>
@@ -513,7 +524,7 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
               <input type="number" value={freight} onChange={e => setFreight(e.target.value)}
                 className="no-print"
                 style={{ width:'80px', border:'none', borderBottom:'1px solid #ddd', textAlign:'right', fontFamily:'monospace', fontSize:'11px', outline:'none', background:'transparent' }} />
-              <span className="inv-total-value print-only" style={{ fontFamily:'monospace', fontWeight:'600' }}>₹{(parseFloat(freight)||0).toFixed(2)}</span>
+              <span className="inv-total-value print-only" style={{ fontFamily:'monospace', fontWeight:'600' }}>₹{(Number.parseFloat(freight)||0).toFixed(2)}</span>
             </div>
             {/* Grand Total */}
             <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 10px', background:'#1a1a1a', color:'white' }}>
@@ -549,13 +560,13 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
       {/* ── ACTION BUTTONS ── */}
       <div className="no-print" style={{ display:'flex', gap:'10px', justifyContent:'flex-end', alignItems:'center', marginTop:'14px', maxWidth:'960px', margin:'14px auto 0' }}>
         {saveError && <span style={{ color:'#c0272d', fontSize:'12px', flex:1 }}>❌ {saveError}</span>}
-        <button onClick={() => window.print()}
+        <button onClick={() => globalThis.print()}
           style={{ padding:'9px 20px', background:'white', color:'#333', border:'1.5px solid #e0e0e0', borderRadius:'7px', fontSize:'13px', cursor:'pointer' }}>
           🖨 Print
         </button>
         <button onClick={handleSave} disabled={saving}
           style={{ padding:'9px 20px', background:'#c0272d', color:'white', border:'none', borderRadius:'7px', fontSize:'13px', fontWeight:'600', cursor:'pointer', opacity:saving?0.7:1 }}>
-          {saving ? 'Saving...' : editInvoice ? '💾 Update' : '💾 Save Invoice'}
+          {saveButtonText}
         </button>
       </div>
     </>
@@ -563,7 +574,7 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
 }
 
 // ── Compact Field Component ──
-function CF({ label, value, onChange, type='text', placeholder, maxLength, onBlur }) {
+function CompactField({ label, value, onChange, type='text', placeholder, maxLength, onBlur }) {
   return (
     <div style={{ marginBottom:'6px' }}>
       <div className="inv-field-label" style={{ fontSize:'9px', fontWeight:'700', color:'#888', textTransform:'uppercase', letterSpacing:'0.3px', marginBottom:'2px' }}>{label}</div>
@@ -573,6 +584,22 @@ function CF({ label, value, onChange, type='text', placeholder, maxLength, onBlu
     </div>
   );
 }
+
+InvoiceForm.propTypes = {
+  editInvoice: PropTypes.object,
+  onSave: PropTypes.func.isRequired,
+  onBack: PropTypes.func.isRequired,
+};
+
+CompactField.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  onChange: PropTypes.func.isRequired,
+  type: PropTypes.string,
+  placeholder: PropTypes.string,
+  maxLength: PropTypes.number,
+  onBlur: PropTypes.func,
+};
 
 // ── Shared input style ──
 const metaInputStyle = {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import API from '../api/client';
 
 export default function InvoiceList({ onNew, onEdit }) {
@@ -20,7 +21,7 @@ export default function InvoiceList({ onNew, onEdit }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Invoice delete karna chahte ho?')) return;
+    if (!globalThis.confirm('Invoice delete karna chahte ho?')) return;
     try {
       await API.delete(`/api/invoices/${id}`);
       setInvoices(invoices.filter(i => i.id !== id));
@@ -32,7 +33,7 @@ export default function InvoiceList({ onNew, onEdit }) {
   const handleDownloadPdf = async (inv) => {
     try {
       const res = await API.get(`/api/invoices/${inv.id}/pdf`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const url = globalThis.URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a');
       a.href = url;
       a.download = `${inv.invoiceNo}.pdf`;
@@ -111,6 +112,11 @@ export default function InvoiceList({ onNew, onEdit }) {
     </div>
   );
 }
+
+InvoiceList.propTypes = {
+  onNew: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
+};
 
 const styles = {
   topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },

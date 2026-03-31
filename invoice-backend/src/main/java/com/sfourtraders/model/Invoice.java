@@ -79,6 +79,7 @@ public class Invoice {
     }
 
     public Invoice() {
+        // Required by JPA for entity instantiation.
     }
 
     public Long getId() {

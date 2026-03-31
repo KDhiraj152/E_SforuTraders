@@ -8,12 +8,12 @@ import com.sfourtraders.service.InvoiceService;
 import com.sfourtraders.service.PdfService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import com.sfourtraders.model.Invoice;
 import java.util.HashMap;
@@ -29,14 +29,17 @@ import java.util.Map;
 public class InvoiceController {
     private static final Logger logger = ApplicationLogger.getLogger(InvoiceController.class);
 
-    @Autowired
-    private InvoiceService invoiceService;
+    private final InvoiceService invoiceService;
 
-    @Autowired
-    private PdfService pdfService;
+    private final PdfService pdfService;
 
-    @Autowired
-    private ExcelService excelService;
+    private final ExcelService excelService;
+
+    public InvoiceController(InvoiceService invoiceService, PdfService pdfService, ExcelService excelService) {
+        this.invoiceService = invoiceService;
+        this.pdfService = pdfService;
+        this.excelService = excelService;
+    }
 
     /**
      * GET /api/invoices - List all invoices with pagination
@@ -46,6 +49,7 @@ public class InvoiceController {
      *   - search: Search by party name (optional)
      */
     @GetMapping
+    @SuppressWarnings("null")
     public ResponseEntity<Map<String, Object>> getAllInvoices(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -53,36 +57,31 @@ public class InvoiceController {
 
         ApplicationLogger.logRequest(InvoiceController.class, "getAllInvoices", "page=" + page + ", size=" + size);
 
-        try {
-            Page<InvoiceResponse> pageResp;
+        Page<InvoiceResponse> pageResp;
 
-            if (search != null && !search.trim().isEmpty()) {
-                logger.debug("Searching invoices by party: {}", search);
-                java.util.List<InvoiceResponse> searchResults = invoiceService.searchByParty(search);
-                int start = Math.min(page * size, searchResults.size());
-                int end = Math.min(start + size, searchResults.size());
-                pageResp = new PageImpl<>(
-                        searchResults.subList(start, end),
-                        org.springframework.data.domain.PageRequest.of(page, size),
-                        searchResults.size()
-                );
-            } else {
-                pageResp = invoiceService.getAllInvoices(page, size);
-            }
-
-            return buildPagedResponse(pageResp, page, size);
-
-        } catch (Exception ex) {
-            logger.error("Error fetching invoices: {}", ex.getMessage(), ex);
-            throw ex;
+        if (search != null && !search.trim().isEmpty()) {
+            logger.debug("Searching invoices by party: {}", search);
+            java.util.List<InvoiceResponse> searchResults = invoiceService.searchByParty(search);
+            int start = Math.min(page * size, searchResults.size());
+            int end = Math.min(start + size, searchResults.size());
+            List<InvoiceResponse> pageContent = List.copyOf(searchResults.subList(start, end));
+            pageResp = new PageImpl<>(
+                    pageContent,
+                    org.springframework.data.domain.PageRequest.of(page, size),
+                    searchResults.size()
+            );
+        } else {
+            pageResp = invoiceService.getAllInvoices(page, size);
         }
+
+        return buildPagedResponse(pageResp, page, size);
     }
 
     /**
      * GET /api/invoices/{id} - Get invoice by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable Long id) {
+    public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable @NonNull Long id) {
         ApplicationLogger.logRequest(InvoiceController.class, "getInvoice", "id=" + id);
         InvoiceResponse invoice = invoiceService.getInvoiceById(id);
         ApplicationLogger.logResponse(InvoiceController.class, "getInvoice", invoice.getInvoiceNo());
@@ -117,7 +116,7 @@ public class InvoiceController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<InvoiceResponse> updateInvoice(
-            @PathVariable Long id,
+            @PathVariable @NonNull Long id,
             @Valid @RequestBody InvoiceRequest request) {
 
         ApplicationLogger.logRequest(InvoiceController.class, "updateInvoice", "id=" + id);
@@ -132,7 +131,7 @@ public class InvoiceController {
      * DELETE /api/invoices/{id} - Delete invoice
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteInvoice(@PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> deleteInvoice(@PathVariable @NonNull Long id) {
         ApplicationLogger.logRequest(InvoiceController.class, "deleteInvoice", "id=" + id);
 
         invoiceService.deleteInvoice(id);
@@ -145,7 +144,7 @@ public class InvoiceController {
      * GET /api/invoices/{id}/pdf - Download invoice as PDF
      */
     @GetMapping("/{id}/pdf")
-    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id) {
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable @NonNull Long id) {
         ApplicationLogger.logRequest(InvoiceController.class, "downloadPdf", "id=" + id);
 
         Invoice invoice = invoiceService.getInvoiceEntityById(id);
@@ -154,7 +153,7 @@ public class InvoiceController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + invoice.getInvoiceNo() + ".pdf\"")
-                .contentType(MediaType.APPLICATION_PDF)
+                .contentType(MediaType.parseMediaType(MediaType.APPLICATION_PDF_VALUE))
                 .body(pdf);
     }
 
