@@ -16,23 +16,23 @@ COPY invoice-backend/src src/
 RUN mvn clean package -DskipTests
 
 # Stage 2: Runtime
-FROM eclipse-temurin:17-jdk-alpine
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install curl for health check
+RUN apt-get update && apt-get install -y --no-install-recommends curl dumb-init && rm -rf /var/lib/apt/lists/*
 
 # Copy jar from build stage
 COPY --from=builder /app/target/invoice-backend-*.jar app.jar
 
 # Create non-root user
-RUN addgroup -g 1001 -S appuser && adduser -u 1001 -S appuser -G appuser
+RUN groupadd -g 1001 appuser && useradd -u 1001 -g appuser appuser
 USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD java -cp app.jar org.springframework.boot.loader.launch.HealthCheckLauncher || exit 1
+  CMD curl -fsS http://localhost:8080/api/auth/health || exit 1
 
 # Expose port
 EXPOSE 8080

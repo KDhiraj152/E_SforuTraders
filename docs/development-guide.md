@@ -5,13 +5,15 @@ This document covers local workflow, coding expectations, and common tasks.
 ## Local workflow
 
 ```bash
-# backend
-cd invoice-backend
-./mvnw spring-boot:run
+./setup.sh
+./start.sh
+```
 
-# frontend
-cd invoice-frontend
-npm run dev
+Shutdown workflow:
+
+```bash
+./stop.sh
+./stop.sh --all
 ```
 
 ## Backend conventions
@@ -56,8 +58,13 @@ cd invoice-backend
 ```bash
 cd invoice-frontend
 npm run lint
+npm run test
 npm run build
 ```
+
+Current note: frontend lint and workflow tests are part of the baseline quality gate. Keep `npm run lint`, `npm run test`, and `npm run build` green before release candidates.
+
+CI note: pull requests to `main` also run a smoke test that authenticates with `/api/auth/login` and creates an invoice through `/api/invoices` against PostgreSQL.
 
 ## API test flow
 

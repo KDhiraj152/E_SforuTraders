@@ -11,6 +11,7 @@ import com.sfourtraders.model.InvoiceItem;
 import com.sfourtraders.repository.InvoiceRepository;
 import com.sfourtraders.shared.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +34,7 @@ public class InvoiceService {
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ISO_DATE;
     private static final String INVOICE_ENTITY = "Invoice";
     private static final String INVOICE_LABEL_PREFIX = "Invoice #";
+    private static final int CREATE_INVOICE_MAX_RETRIES = 3;
 
     private final InvoiceRepository invoiceRepository;
 
@@ -58,7 +60,7 @@ public class InvoiceService {
         logger.debug("Fetching invoices - page: {}, size: {}", page, size);
         Pageable pageable = PageRequest.of(page, size);
         return invoiceRepository.findAllByOrderByCreatedAtDesc(pageable)
-                .map(this::mapInvoiceToResponse);
+                .map(invoice -> mapInvoiceToResponse(invoice, false));
     }
 
     /**
@@ -97,19 +99,26 @@ public class InvoiceService {
     public InvoiceResponse createInvoice(InvoiceRequest request) {
         logger.info("Creating new invoice");
 
-        Invoice invoice = mapRequestToInvoice(request);
-        invoice.setInvoiceNo(invoiceNumberService.generateNextInvoiceNumber());
+        for (int attempt = 1; attempt <= CREATE_INVOICE_MAX_RETRIES; attempt++) {
+            Invoice invoice = mapRequestToInvoice(request);
+            invoice.setInvoiceNo(invoiceNumberService.generateNextInvoiceNumber());
 
-        // Validate invoice data
-        calculationService.validateInvoiceData(invoice);
+            calculationService.validateInvoiceData(invoice);
+            updateInvoiceTotals(invoice);
 
-        // Calculate totals
-        updateInvoiceTotals(invoice);
+            try {
+                Invoice saved = invoiceRepository.saveAndFlush(invoice);
+                ApplicationLogger.logBusinessEvent(InvoiceService.class, "INVOICE_CREATED", INVOICE_LABEL_PREFIX + saved.getInvoiceNo());
+                return mapInvoiceToResponse(saved);
+            } catch (DataIntegrityViolationException ex) {
+                if (attempt == CREATE_INVOICE_MAX_RETRIES) {
+                    throw ex;
+                }
+                logger.warn("Invoice number collision on attempt {}. Retrying with new sequence.", attempt);
+            }
+        }
 
-        Invoice saved = invoiceRepository.save(invoice);
-        ApplicationLogger.logBusinessEvent(InvoiceService.class, "INVOICE_CREATED", INVOICE_LABEL_PREFIX + saved.getInvoiceNo());
-
-        return mapInvoiceToResponse(saved);
+        throw new IllegalStateException("Failed to create invoice after retries");
     }
 
     /**
@@ -154,7 +163,7 @@ public class InvoiceService {
     public List<InvoiceResponse> searchByParty(String partyName) {
         logger.debug("Searching invoices by party: {}", partyName);
         return invoiceRepository.findByBilledNameIgnoreCaseOrShippedNameIgnoreCase(partyName, partyName).stream()
-                .map(this::mapInvoiceToResponse)
+                .map(invoice -> mapInvoiceToResponse(invoice, false))
                 .toList();
     }
 
@@ -316,6 +325,10 @@ public class InvoiceService {
     }
 
     private InvoiceResponse mapInvoiceToResponse(Invoice invoice) {
+        return mapInvoiceToResponse(invoice, true);
+    }
+
+    private InvoiceResponse mapInvoiceToResponse(Invoice invoice, boolean includeItems) {
         InvoiceResponse response = new InvoiceResponse();
         response.setId(invoice.getId());
         response.setInvoiceNo(invoice.getInvoiceNo());
@@ -355,7 +368,7 @@ public class InvoiceService {
         response.setEwbNo(invoice.getEwbNo());
         response.setEwbStatus(invoice.getEwbStatus());
 
-        if (invoice.getItems() != null) {
+        if (includeItems && invoice.getItems() != null) {
             response.setItems(invoice.getItems().stream()
                     .map(item -> {
                         InvoiceItemResponse itemResp = new InvoiceItemResponse();

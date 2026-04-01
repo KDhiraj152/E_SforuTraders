@@ -1,7 +1,7 @@
 # Multi-stage build for React application
 
 # Stage 1: Build
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -11,11 +11,13 @@ COPY invoice-frontend/package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source
+# Copy source and config files
 COPY invoice-frontend/src src/
+COPY invoice-frontend/public public/
 COPY invoice-frontend/index.html .
 COPY invoice-frontend/vite.config.js .
-COPY invoice-frontend/.env.production .
+COPY invoice-frontend/jsconfig.json .
+COPY invoice-frontend/.env.production .env.production
 
 # Build
 RUN npm run build

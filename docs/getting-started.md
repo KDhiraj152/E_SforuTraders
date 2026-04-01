@@ -2,13 +2,28 @@
 
 This guide gets the full stack running locally with the fewest moving parts.
 
-If you want the fastest setup path, run:
+Recommended workflow:
 
 ```bash
-bash scripts/bootstrap.sh
+./setup.sh
+./start.sh
 ```
 
-Then continue from "3. Start backend".
+Quality checks:
+
+```bash
+cd invoice-frontend && npm run lint && npm run test
+cd ../invoice-backend && ./mvnw test
+```
+
+Stop services:
+
+```bash
+./stop.sh
+./stop.sh --all
+```
+
+Manual fallback flow (if you do not use root scripts) is documented below.
 
 ## Prerequisites
 
@@ -39,7 +54,7 @@ openssl rand -base64 32
 ## 2. Start database
 
 ```bash
-docker-compose up -d postgres
+docker compose --env-file .env.local up -d postgres
 ```
 
 ## 3. Start backend
@@ -79,8 +94,12 @@ You should get a healthy response from the backend.
 ## Troubleshooting
 
 - If port 8080 is busy: `lsof -i :8080`
-- If DB fails to connect: `docker-compose logs postgres`
+- If DB fails to connect: `docker compose --env-file .env.local logs postgres`
 - If frontend cannot reach backend: check `VITE_API_URL` in frontend env
+- Script compatibility fallbacks now supported:
+	- `setup.sh`, `start.sh`, and `stop.sh` use `docker compose` and fall back to `docker-compose` automatically.
+	- Port detection uses `lsof` and falls back to `ss` or `netstat` if needed.
+	- Readiness checks use `curl` and fall back to `wget`; if neither exists, scripts use port-open checks.
 
 ## Next steps
 

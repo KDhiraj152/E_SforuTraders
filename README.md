@@ -19,29 +19,27 @@ All project documents are now consolidated under [docs/](docs/README.md).
 - [Architecture and refactor summary](docs/architecture-refactor-summary.md)
 - [Frontend guide](docs/frontend-guide.md)
 - [Release guide](docs/release-guide.md)
+- [Codebase audit (2026-04)](docs/codebase-audit-2026-04.md)
 
-## Community and project standards
 
-- [Contributing guide](CONTRIBUTING.md)
-- [Code of conduct](CODE_OF_CONDUCT.md)
-- [Security policy](SECURITY.md)
-- [License](LICENSE)
 
 ## Quick run
 
 ```bash
-# terminal 1
-docker-compose up -d postgres
-
-# terminal 2
-cd invoice-backend && ./mvnw spring-boot:run
-
-# terminal 3
-cd invoice-frontend && npm install && npm run dev
+./setup.sh
+./start.sh
 ```
 
 Frontend: `http://localhost:5173`  
 Backend: `http://localhost:8080/api`
+
+Stop services:
+
+```bash
+./stop.sh
+# remove database volume too
+./stop.sh --all
+```
 
 ## One-command bootstrap
 
@@ -63,6 +61,16 @@ This repository uses Semantic Versioning and a changelog-based release flow.
 
 - Dependency update automation: [.github/dependabot.yml](.github/dependabot.yml)
 - Security scanning workflow: [.github/workflows/security.yml](.github/workflows/security.yml)
+
+## Pull request CI checks
+
+On every pull request to `main`, CI now validates:
+
+- Backend tests (`./mvnw test`)
+- Frontend lint, tests, and build (`npm run lint`, `npm run test`, `npm run build`)
+- Lightweight smoke test: login via `/api/auth/login` and create invoice via `/api/invoices` against real Postgres
+
+Workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
 
 ---
 

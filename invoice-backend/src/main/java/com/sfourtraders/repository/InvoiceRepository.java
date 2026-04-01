@@ -42,6 +42,16 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     @Query(value = "SELECT * FROM invoices ORDER BY id DESC LIMIT 1", nativeQuery = true)
     Optional<Invoice> findLastInvoice();
 
+        /**
+         * Get highest numeric invoice sequence for the given year from persisted data.
+         */
+        @Query(value = """
+            SELECT COALESCE(MAX(CAST(SPLIT_PART(invoice_no, '-', 3) AS INTEGER)), 0)
+            FROM invoices
+            WHERE SPLIT_PART(invoice_no, '-', 2) = :year
+            """, nativeQuery = true)
+        int findMaxSequenceForYear(String year);
+
     /**
      * Search invoices by billed party name (case-insensitive)
      */

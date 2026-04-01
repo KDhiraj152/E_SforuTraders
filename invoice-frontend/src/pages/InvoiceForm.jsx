@@ -1,18 +1,44 @@
-import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import API from '../api/client';
+import { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { PageHeader, PageContainer } from '@/components/layout'
+import {
+  ArrowLeft,
+  Save,
+  Plus,
+  Trash2,
+  Loader2,
+  Building2,
+  Truck,
+  Package,
+  Calculator,
+  FileText,
+} from 'lucide-react'
+import API from '@/api/client'
 
 const STATE_CODES = {
-  'Jammu & Kashmir':'01','Himachal Pradesh':'02','Punjab':'03','Chandigarh':'04',
-  'Uttarakhand':'05','Haryana':'06','Delhi':'07','Rajasthan':'08','Uttar Pradesh':'09',
-  'Bihar':'10','Sikkim':'11','Arunachal Pradesh':'12','Nagaland':'13','Manipur':'14',
-  'Mizoram':'15','Tripura':'16','Meghalaya':'17','Assam':'18','West Bengal':'19',
-  'Jharkhand':'20','Odisha':'21','Chhattisgarh':'22','Madhya Pradesh':'23','Gujarat':'24',
-  'Maharashtra':'27','Andhra Pradesh':'28','Karnataka':'29','Goa':'30','Kerala':'32',
-  'Tamil Nadu':'33','Puducherry':'34','Telangana':'36',
-};
+  'Jammu & Kashmir': '01', 'Himachal Pradesh': '02', 'Punjab': '03', 'Chandigarh': '04',
+  'Uttarakhand': '05', 'Haryana': '06', 'Delhi': '07', 'Rajasthan': '08', 'Uttar Pradesh': '09',
+  'Bihar': '10', 'Sikkim': '11', 'Arunachal Pradesh': '12', 'Nagaland': '13', 'Manipur': '14',
+  'Mizoram': '15', 'Tripura': '16', 'Meghalaya': '17', 'Assam': '18', 'West Bengal': '19',
+  'Jharkhand': '20', 'Odisha': '21', 'Chhattisgarh': '22', 'Madhya Pradesh': '23', 'Gujarat': '24',
+  'Maharashtra': '27', 'Andhra Pradesh': '28', 'Karnataka': '29', 'Goa': '30', 'Kerala': '32',
+  'Tamil Nadu': '33', 'Puducherry': '34', 'Telangana': '36',
+}
 
-const emptyItem = () => ({ description: '', hsnCode: '', uom: '', quantity: '', rate: '', value: 0 });
+const emptyItem = () => ({ description: '', hsnCode: '', uom: '', quantity: '', rate: '', value: 0 })
 
 export default function InvoiceForm({ editInvoice, onSave, onBack }) {
   const [invoiceNo, setInvoiceNo] = useState('');
@@ -53,10 +79,14 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
   }, [editInvoice]);
 
   const fetchAllInvoices = async () => {
-    try { const res = await API.get('/api/invoices'); setAllInvoices(res.data); } catch { /* ignore non-critical preload failure */ }
+    try {
+      const res = await API.get('/api/invoices');
+      const invoices = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      setAllInvoices(invoices);
+    } catch { /* ignore non-critical preload failure */ }
   };
   const fetchNextNumber = async () => {
-    try { const res = await API.get('/api/invoices/next-number'); setInvoiceNo(res.data.invoiceNo); } catch { /* ignore and allow manual entry */ }
+    try { const res = await API.get('/api/invoices/meta/next-number'); setInvoiceNo(res.data.invoiceNo); } catch { /* ignore and allow manual entry */ }
   };
   const loadEditData = (inv) => {
     setInvoiceNo(inv.invoiceNo||''); setInvoiceDate(inv.invoiceDate||'');

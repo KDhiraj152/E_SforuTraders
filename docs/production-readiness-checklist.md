@@ -10,6 +10,7 @@ Use this checklist before every production release.
 - [ ] Admin or default credentials removed or replaced
 - [ ] CORS restricted to real frontend domains
 - [ ] TLS enabled in all external environments
+- [ ] Compose deployment uses explicit env file (`docker compose --env-file ...`)
 
 ## Backend quality
 
@@ -25,6 +26,7 @@ Use this checklist before every production release.
 - [ ] Token handling is secure and predictable
 - [ ] User-visible error states exist for failed requests
 - [ ] Build artifacts generated successfully
+- [ ] Lint baseline is clean or accepted exceptions are documented
 
 ## Data and operations
 
@@ -40,6 +42,7 @@ Use this checklist before every production release.
 - [ ] Deployment notes prepared
 - [ ] Smoke tests passed after deployment
 - [ ] Rollback steps validated
+- [ ] `./setup.sh`, `./start.sh`, and `./stop.sh` validated on target host
 
 ## Final sign-off
 

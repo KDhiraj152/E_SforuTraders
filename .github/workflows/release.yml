@@ -1,23 +1,18 @@
 name: Release
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
 
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
 
 jobs:
-  release-please:
-    name: Create release PR / publish release
+  validate-changelog:
+    name: Validate Changelog
     runs-on: ubuntu-latest
     steps:
-      - name: Run release-please
-        uses: googleapis/release-please-action@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config-file: .release-please-config.json
-          manifest-file: .release-please-manifest.json
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure changelog exists
+        run: test -f CHANGELOG.md

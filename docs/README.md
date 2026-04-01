@@ -12,13 +12,9 @@ This folder contains the full project documentation in one place.
 - [Architecture and refactor summary](./architecture-refactor-summary.md)
 - [Frontend guide](./frontend-guide.md)
 - [Release guide](./release-guide.md)
+- [Codebase audit (2026-04)](./codebase-audit-2026-04.md)
 
-## Community
 
-- [Contributing guide](../CONTRIBUTING.md)
-- [Code of conduct](../CODE_OF_CONDUCT.md)
-- [Security policy](../SECURITY.md)
-- [License](../LICENSE)
 
 ---
 

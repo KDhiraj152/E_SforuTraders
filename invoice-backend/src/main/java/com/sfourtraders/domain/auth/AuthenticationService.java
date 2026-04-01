@@ -19,14 +19,23 @@ public class AuthenticationService {
 
     /**
      * Authenticate user with username and password
-     * Credentials should be environment-injected, not hard-coded
+     * Supports both plain text and bcrypt-hashed config passwords
      */
     public boolean authenticate(String username, String password,
                                String configUsername, String configPassword) {
         try {
             // Timing attack resistance - always compute hash
             boolean usernameMatch = username != null && username.equals(configUsername);
-            boolean passwordMatch = password != null && passwordEncoder.matches(password, configPassword);
+            
+            // Check if config password is bcrypt hash (starts with $2a$, $2b$, or $2y$)
+            boolean passwordMatch;
+            if (configPassword != null && configPassword.startsWith("$2")) {
+                // Config password is bcrypt hash
+                passwordMatch = password != null && passwordEncoder.matches(password, configPassword);
+            } else {
+                // Config password is plain text (development mode)
+                passwordMatch = password != null && password.equals(configPassword);
+            }
 
             if (!usernameMatch || !passwordMatch) {
                 logger.warn("Authentication failed for user: {}", username);

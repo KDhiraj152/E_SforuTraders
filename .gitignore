@@ -29,6 +29,7 @@ invoice-frontend/.env.local
 # Logs
 *.log
 logs/
+test-*.png
 
 # Database
 *.db
@@ -49,3 +50,4 @@ pom.xml.tag
 .cache/
 .temp/
 temp/
+.fake

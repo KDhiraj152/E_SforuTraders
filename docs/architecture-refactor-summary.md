@@ -32,6 +32,7 @@ This project started as a functional prototype and moved toward a production set
 - Multi-stage Dockerfiles used for smaller runtime images.
 - Compose flow documented for local multi-service runs.
 - Documentation consolidated under `docs/` with consistent naming.
+- Root lifecycle scripts (`setup.sh`, `start.sh`, `stop.sh`) hardened with explicit `.env.local` handling and deterministic startup/teardown checks.
 
 ## Why this matters
 

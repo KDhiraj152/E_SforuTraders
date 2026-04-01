@@ -1,146 +1,263 @@
-import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-import API from '../api/client';
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { PageHeader, PageContainer } from '@/components/layout'
+import {
+  Plus,
+  Search,
+  Loader2,
+  FileText,
+  MoreHorizontal,
+  Pencil,
+  Printer,
+  Trash2,
+  Download,
+} from 'lucide-react'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import API from '@/api/client'
 
 export default function InvoiceList({ onNew, onEdit }) {
-  const [invoices, setInvoices] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, invoice: null })
+  const [deleting, setDeleting] = useState(false)
 
-  useEffect(() => { fetchInvoices(); }, []);
+  useEffect(() => {
+    fetchInvoices()
+  }, [])
 
   const fetchInvoices = async () => {
     try {
-      const res = await API.get('/api/invoices');
-      setInvoices(res.data);
+      const res = await API.get('/api/invoices')
+      const invoiceData = Array.isArray(res.data)
+        ? res.data
+        : res.data?.content || []
+      setInvoices(invoiceData)
     } catch (err) {
-      console.error('Error fetching invoices:', err);
+      console.error('Error fetching invoices:', err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  const handleDelete = async (id) => {
-    if (!globalThis.confirm('Invoice delete karna chahte ho?')) return;
+  const handleDelete = async () => {
+    if (!deleteDialog.invoice) return
+    setDeleting(true)
     try {
-      await API.delete(`/api/invoices/${id}`);
-      setInvoices(invoices.filter(i => i.id !== id));
+      await API.delete(`/api/invoices/${deleteDialog.invoice.id}`)
+      setInvoices(invoices.filter((i) => i.id !== deleteDialog.invoice.id))
+      setDeleteDialog({ open: false, invoice: null })
     } catch {
-      alert('Delete nahi ho saka');
+      alert('Could not delete invoice')
+    } finally {
+      setDeleting(false)
     }
-  };
+  }
 
   const handleDownloadPdf = async (inv) => {
     try {
-      const res = await API.get(`/api/invoices/${inv.id}/pdf`, { responseType: 'blob' });
-      const url = globalThis.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${inv.invoiceNo}.pdf`;
-      a.click();
+      const res = await API.get(`/api/invoices/${inv.id}/pdf`, {
+        responseType: 'blob',
+      })
+      const url = globalThis.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${inv.invoiceNo}.pdf`
+      a.click()
     } catch {
-      alert('PDF download nahi ho saka');
+      alert('Could not download PDF')
     }
-  };
+  }
 
-  const filtered = invoices.filter(i =>
-    (i.billedName || '').toLowerCase().includes(search.toLowerCase()) ||
-    (i.invoiceNo || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = invoices.filter(
+    (i) =>
+      (i.billedName || '').toLowerCase().includes(search.toLowerCase()) ||
+      (i.invoiceNo || '').toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
-    <div>
-      <div style={styles.topbar}>
-        <h2 style={styles.title}>All Invoices</h2>
-        <div style={styles.actions}>
-          <input
-            style={styles.search}
-            placeholder="Search party name..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <button style={styles.btnPrimary} onClick={onNew}>+ New Invoice</button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="All Invoices"
+        description={`${invoices.length} invoices in your records`}
+        action={
+          <Button onClick={onNew} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Invoice
+          </Button>
+        }
+      />
 
-      <div style={styles.tableWrap}>
-        {loading ? (
-          <p style={{ padding: '24px', textAlign: 'center', color: '#888' }}>Loading...</p>
-        ) : (
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                {['Invoice No.', 'Party Name', 'Date', 'Place of Supply', 'Vehicle No.', 'Grand Total', 'EWB No.', 'Actions'].map(h => (
-                  <th key={h} style={styles.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '24px', color: '#888' }}>
-                  No invoices found
-                </td></tr>
-              ) : filtered.map(inv => (
-                <tr key={inv.id} style={styles.tr}>
-                  <td style={{ ...styles.td, color: '#c0272d', fontWeight: '600', fontFamily: 'monospace' }}>
-                    {inv.invoiceNo}
-                  </td>
-                  <td style={styles.td}>{inv.billedName || '—'}</td>
-                  <td style={styles.td}>{inv.invoiceDate || '—'}</td>
-                  <td style={styles.td}>{inv.placeOfSupply || '—'}</td>
-                  <td style={{ ...styles.td, fontFamily: 'monospace' }}>{inv.vehicleNo || '—'}</td>
-                  <td style={{ ...styles.td, fontFamily: 'monospace', fontWeight: '600' }}>
-                    ₹{inv.grandTotal?.toFixed(2) || '0.00'}
-                  </td>
-                  <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '11px' }}>
-                    {inv.ewbNo || <span style={{ color: '#f59e0b', fontSize: '11px' }}>Pending</span>}
-                  </td>
-                  <td style={styles.td}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button style={styles.btnSm} onClick={() => onEdit(inv)}>✏ Edit</button>
-                      <button style={styles.btnSm} onClick={() => handleDownloadPdf(inv)}>🖨 PDF</button>
-                      <button style={{ ...styles.btnSm, background: '#fee2e2', color: '#c0272d' }}
-                        onClick={() => handleDelete(inv.id)}>🗑</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardTitle className="text-lg">Invoice Records</CardTitle>
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by party name or invoice no..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice No.</TableHead>
+                  <TableHead>Party Name</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Place of Supply</TableHead>
+                  <TableHead>Vehicle No.</TableHead>
+                  <TableHead className="text-right">Grand Total</TableHead>
+                  <TableHead>EWB No.</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-16">
+                      <div className="flex flex-col items-center gap-3">
+                        <FileText className="h-12 w-12 text-muted-foreground/50" />
+                        <p className="text-muted-foreground">
+                          {search ? 'No invoices match your search' : 'No invoices found'}
+                        </p>
+                        {!search && (
+                          <Button variant="outline" size="sm" onClick={onNew}>
+                            Create your first invoice
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-mono font-semibold text-brand-500">
+                        {inv.invoiceNo}
+                      </TableCell>
+                      <TableCell className="font-medium">{inv.billedName || '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(inv.invoiceDate)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {inv.placeOfSupply || '—'}
+                      </TableCell>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {inv.vehicleNo || '—'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        {formatCurrency(inv.grandTotal)}
+                      </TableCell>
+                      <TableCell>
+                        {inv.ewbNo ? (
+                          <span className="font-mono text-xs">{inv.ewbNo}</span>
+                        ) : (
+                          <Badge variant="warning">Pending</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEdit(inv)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadPdf(inv)}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDeleteDialog({ open: true, invoice: inv })}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, invoice: null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Invoice</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete invoice{' '}
+              <span className="font-mono font-semibold text-foreground">
+                {deleteDialog.invoice?.invoiceNo}
+              </span>
+              ? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: false, invoice: null })}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </PageContainer>
+  )
 }
-
-InvoiceList.propTypes = {
-  onNew: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-};
-
-const styles = {
-  topbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-  title: { fontFamily: 'Georgia, serif', fontSize: '24px', margin: 0 },
-  actions: { display: 'flex', gap: '10px', alignItems: 'center' },
-  search: {
-    padding: '8px 14px', border: '1.5px solid #e0e0e0',
-    borderRadius: '7px', fontSize: '13px', outline: 'none', width: '220px',
-  },
-  btnPrimary: {
-    padding: '9px 18px', background: '#c0272d', color: 'white',
-    border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-  },
-  tableWrap: { background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: {
-    background: '#f4f4f4', fontSize: '11px', fontWeight: '600',
-    textTransform: 'uppercase', letterSpacing: '0.5px', color: '#666',
-    padding: '10px 14px', textAlign: 'left',
-  },
-  td: { padding: '11px 14px', fontSize: '13px', borderBottom: '1px solid #e0e0e0', verticalAlign: 'middle' },
-  tr: { cursor: 'default' },
-  btnSm: {
-    padding: '5px 10px', background: '#f4f4f4', border: 'none',
-    borderRadius: '5px', fontSize: '12px', cursor: 'pointer', fontWeight: '500',
-  },
-};

@@ -7,7 +7,7 @@ This guide covers local container deployment and a production baseline.
 From repository root:
 
 ```bash
-docker-compose up --build
+docker compose --env-file .env.local up --build
 ```
 
 Services:
@@ -36,6 +36,12 @@ Set these at deployment time (not in git):
 - `JWT_SECRET`
 - `ALLOWED_ORIGINS`
 - `SPRING_PROFILES_ACTIVE=prod`
+
+For production compose deployment, use a dedicated environment file managed by your secret system:
+
+```bash
+docker compose --env-file /secure/path/prod.env up -d --build
+```
 
 ## Production rollout checklist
 

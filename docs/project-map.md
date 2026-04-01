@@ -11,6 +11,7 @@ If you are new to this repository, start here.
 - [Architecture and refactor summary](./architecture-refactor-summary.md): what changed and why
 - [Frontend guide](./frontend-guide.md): frontend runtime and conventions
 - [Release guide](./release-guide.md): versioning and changelog workflow
+- [Codebase audit (2026-04)](./codebase-audit-2026-04.md): current verified quality state
 
 ## Repository structure
 
@@ -51,6 +52,9 @@ invoice-frontend/src/
 
 ## Practical entry points
 
+- Setup script: `setup.sh`
+- Start script: `start.sh`
+- Stop script: `stop.sh`
 - Backend app start: `invoice-backend/src/main/java/com/sfourtraders/InvoiceBackendApplication.java`
 - Backend auth config: `invoice-backend/src/main/java/com/sfourtraders/config/SecurityConfig.java`
 - Frontend app shell: `invoice-frontend/src/App.jsx`
