@@ -88,6 +88,14 @@ load_env_file() {
     done < "$ENV_FILE"
 }
 
+configure_test_credentials() {
+    if [[ -z "${APP_USERNAME:-}" || -z "${APP_PASSWORD:-}" ]]; then
+        log_error "APP_USERNAME and APP_PASSWORD must be set in environment or $ENV_FILE"
+        log_info "Run ./setup.sh to create a secure .env.local, then retry ./start.sh"
+        return 1
+    fi
+}
+
 # Check if a port is in use
 is_port_in_use() {
     local port=$1
@@ -353,6 +361,10 @@ show_status() {
     echo "    tail -f $LOG_DIR/backend.log   - Watch backend logs"
     echo "    tail -f $LOG_DIR/frontend.log  - Watch frontend logs"
     echo ""
+    echo "  Test Login:"
+    echo "    ID:       $APP_USERNAME"
+    echo "    Password: $APP_PASSWORD"
+    echo ""
 }
 
 # Main function
@@ -376,6 +388,7 @@ main() {
     fi
 
     load_env_file
+    configure_test_credentials
     echo "============================================================"
     echo "  E_SforuTraders - Starting Development Environment"
     echo "============================================================"

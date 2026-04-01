@@ -63,13 +63,18 @@ jobs:
     name: Smoke E2E (auth + create invoice)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    env:
+      SMOKE_APP_USERNAME: ci_smoke_user
+      SMOKE_APP_PASSWORD: ci-smoke-${{ github.run_id }}
+      SMOKE_DB_PASSWORD: ci-smoke-db-${{ github.run_id }}
+      SMOKE_JWT_SECRET: ci-smoke-jwt-${{ github.run_id }}-${{ github.sha }}
     services:
       postgres:
         image: postgres:15-alpine
         env:
           POSTGRES_DB: invoice_db
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: ${{ env.SMOKE_DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -93,10 +98,10 @@ jobs:
         env:
           DB_URL: jdbc:postgresql://localhost:5432/invoice_db
           DB_USERNAME: postgres
-          DB_PASSWORD: postgres
-          JWT_SECRET: ci-smoke-secret-key-ci-smoke-secret-key
-          APP_USERNAME: admin
-          APP_PASSWORD: admin123
+          DB_PASSWORD: ${{ env.SMOKE_DB_PASSWORD }}
+          JWT_SECRET: ${{ env.SMOKE_JWT_SECRET }}
+          APP_USERNAME: ${{ env.SMOKE_APP_USERNAME }}
+          APP_PASSWORD: ${{ env.SMOKE_APP_PASSWORD }}
           ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
           SPRING_PROFILES_ACTIVE: dev
         run: |
@@ -116,10 +121,13 @@ jobs:
           exit 1
 
       - name: Smoke test auth and invoice creation
+        env:
+          SMOKE_APP_USERNAME: ${{ env.SMOKE_APP_USERNAME }}
+          SMOKE_APP_PASSWORD: ${{ env.SMOKE_APP_PASSWORD }}
         run: |
           LOGIN_RESPONSE=$(curl -fsS -X POST http://localhost:8080/api/auth/login \
             -H 'Content-Type: application/json' \
-            -d '{"username":"admin","password":"admin123"}')
+            -d "{\"username\":\"$SMOKE_APP_USERNAME\",\"password\":\"$SMOKE_APP_PASSWORD\"}")
 
           TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.token')
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then

@@ -39,16 +39,20 @@ At repository root, create `.env.local`:
 ```bash
 DB_NAME=invoice_db
 DB_USERNAME=postgres
-DB_PASSWORD=postgres
-JWT_SECRET=replace-with-32-byte-secret
+DB_PASSWORD=replace-with-generated-db-password
+JWT_SECRET=replace-with-generated-jwt-secret
+APP_USERNAME=replace-with-local-admin-username
+APP_PASSWORD=replace-with-generated-app-password
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ACTIVE_PROFILE=dev
 ```
 
-Use a strong JWT secret:
+Generate secure local values:
 
 ```bash
+openssl rand -hex 16   # DB_PASSWORD
 openssl rand -base64 32
+openssl rand -hex 16   # APP_PASSWORD
 ```
 
 ## 2. Start database

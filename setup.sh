@@ -77,18 +77,31 @@ generate_secret() {
     fi
 }
 
+generate_token() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 16
+    else
+        date +%s | shasum | awk '{print $1}'
+    fi
+}
+
 create_root_env_local() {
     log_warn "Creating local development .env.local"
+    local db_password
+    local app_password
+    db_password="$(generate_token)"
+    app_password="$(generate_token)"
+
     cat > "$ENV_FILE" << EOF
 # Local Development Configuration
 DB_URL=jdbc:postgresql://localhost:5432/invoice_db
 DB_USERNAME=postgres
-DB_PASSWORD=postgres
+DB_PASSWORD=${db_password}
 JWT_SECRET=$(generate_secret)
 JWT_EXPIRATION=86400000
 JWT_REFRESH_EXPIRATION=604800000
-APP_USERNAME=admin
-APP_PASSWORD=admin123
+APP_USERNAME=local_admin
+APP_PASSWORD=${app_password}
 SPRING_PROFILES_ACTIVE=dev
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 APP_ENVIRONMENT=development
