@@ -9,6 +9,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    // Avoid stale pre-bundled dependency artifacts causing blank pages
+    // with "504 Outdated Optimize Dep" after dependency/config updates.
+    force: true,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

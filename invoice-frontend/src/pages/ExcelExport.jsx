@@ -14,21 +14,41 @@ export default function ExcelExport() {
   const [status, setStatus] = useState({ type: null, message: '' })
 
   const handleExport = async () => {
+    if ((from && !to) || (!from && to)) {
+      setStatus({ type: 'error', message: 'Please select both From and To dates.' })
+      return
+    }
+    if (from && to && from > to) {
+      setStatus({ type: 'error', message: 'From date cannot be after To date.' })
+      return
+    }
+
     setLoading(true)
     setStatus({ type: null, message: '' })
     try {
-      let url = '/api/invoices/export/excel'
-      if (from && to) url += `?from=${from}&to=${to}`
-      const res = await API.get(url, { responseType: 'blob' })
-      const blobUrl = globalThis.URL.createObjectURL(new Blob([res.data]))
+      const res = await API.get('/api/invoices/export/excel', {
+        params: from && to ? { from, to } : undefined,
+        responseType: 'blob',
+        headers: {
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      })
+
+      const blobUrl = globalThis.URL.createObjectURL(res.data)
       const a = document.createElement('a')
       a.href = blobUrl
-      const dateSuffix = from ? `_${from}_to_${to}` : ''
+      const dateSuffix = from && to ? `_${from}_to_${to}` : ''
       a.download = `SFourTraders_Invoices${dateSuffix}.xlsx`
+      document.body.appendChild(a)
       a.click()
+      a.remove()
+      globalThis.URL.revokeObjectURL(blobUrl)
       setStatus({ type: 'success', message: 'Excel file downloaded successfully!' })
-    } catch {
-      setStatus({ type: 'error', message: 'Could not download the file. Please try again.' })
+    } catch (error) {
+      const message = error.response?.status === 401
+        ? 'Session expired. Please sign in again and retry.'
+        : 'Could not download the file. Please try again.'
+      setStatus({ type: 'error', message })
     } finally {
       setLoading(false)
     }

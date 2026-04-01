@@ -1,31 +1,5 @@
 import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { PageHeader, PageContainer } from '@/components/layout'
-import {
-  ArrowLeft,
-  Save,
-  Plus,
-  Trash2,
-  Loader2,
-  Building2,
-  Truck,
-  Package,
-  Calculator,
-  FileText,
-} from 'lucide-react'
 import API from '@/api/client'
 
 const STATE_CODES = {
@@ -224,9 +198,6 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
         /* Hide print-only elements on screen */
         .print-only { display: none; }
 
-        /* Print root — invisible wrapper on screen */
-        .invoice-print-root { display: contents; }
-
         /* =========================================
            PRINT STYLES — A4 Perfect Layout
            ========================================= */
@@ -319,7 +290,6 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
       )}
 
       {/* ========== INVOICE PAPER ========== */}
-      <div className="invoice-print-root">
       <div className="invoice-paper" style={{
         background:'white', borderRadius:'10px',
         boxShadow:'0 4px 24px rgba(0,0,0,0.1)',
@@ -585,7 +555,6 @@ export default function InvoiceForm({ editInvoice, onSave, onBack }) {
           </div>
         </div>
       </div>{/* end invoice-paper */}
-      </div>{/* end invoice-print-root */}
 
       {/* ── ACTION BUTTONS ── */}
       <div className="no-print" style={{ display:'flex', gap:'10px', justifyContent:'flex-end', alignItems:'center', marginTop:'14px', maxWidth:'960px', margin:'14px auto 0' }}>

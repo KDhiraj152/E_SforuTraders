@@ -4,9 +4,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Receipt, Loader2, Eye, EyeOff } from 'lucide-react'
-import API from '@/api/client'
+import { useAuth } from '@/contexts/useAuth'
 
 export default function Login({ onLogin }) {
+  const { login: loginWithContext } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -22,10 +23,12 @@ export default function Login({ onLogin }) {
     setLoading(true)
     setError('')
     try {
-      const res = await API.post('/api/auth/login', { username, password })
-      localStorage.setItem('token', res.data.token)
-      localStorage.setItem('user', username)
-      onLogin()
+      const result = await loginWithContext(username, password)
+      if (!result.success) {
+        setError(result.error || 'Invalid User ID or Password')
+        return
+      }
+      onLogin?.()
     } catch {
       setError('Invalid User ID or Password')
     } finally {

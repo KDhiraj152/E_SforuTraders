@@ -79,10 +79,30 @@ load_env_file() {
     fi
 
     log_info "Loading environment from $ENV_FILE"
-    while IFS='=' read -r key value; do
-        [[ -z "$key" || "$key" == \#* ]] && continue
-        if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-            value="${value%$'\r'}"
+    # Parse KEY=VALUE lines without executing file content and handle files that
+    # do not end with a trailing newline.
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+        # Accept optional "export " prefix.
+        line="${line#export }"
+
+        if [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=(.*)$ ]]; then
+            local key
+            local value
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+
+            # Trim leading/trailing whitespace around values.
+            value="${value#${value%%[![:space:]]*}}"
+            value="${value%${value##*[![:space:]]}}"
+
+            # Remove matching single/double quotes.
+            if [[ "$value" =~ ^\".*\"$ || "$value" =~ ^\'.*\'$ ]]; then
+                value="${value:1:${#value}-2}"
+            fi
+
             export "$key=$value"
         fi
     done < "$ENV_FILE"
@@ -125,6 +145,22 @@ get_port_pid() {
         ss -ltnp "sport = :$port" 2>/dev/null | awk 'match($0, /pid=([0-9]+)/, m) { print m[1]; exit }'
         return
     fi
+}
+
+get_port_listener_command() {
+    local port=$1
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | awk 'NR==2 {print $1}'
+        return
+    fi
+    echo ""
+}
+
+is_docker_port_proxy_listener() {
+    local port=$1
+    local listener
+    listener="$(get_port_listener_command "$port")"
+    [[ "$listener" == com.docke* || "$listener" == docker-proxy* ]]
 }
 
 can_probe_http() {
@@ -218,6 +254,16 @@ start_postgres() {
 # Start backend
 start_backend() {
     log_info "Starting backend (Spring Boot)..."
+
+    if is_port_in_use $BACKEND_PORT; then
+        # A running compose backend can occupy port 8080 through Docker proxy.
+        # Stop it so the local Spring Boot process can start for dev workflow.
+        if is_docker_port_proxy_listener "$BACKEND_PORT" && compose_cmd ps backend 2>/dev/null | grep -Eq "Up|running"; then
+            log_warn "Port $BACKEND_PORT is occupied by Docker Compose backend; stopping it for local dev startup"
+            compose_cmd stop backend > "$LOG_DIR/docker-backend-stop.log" 2>&1 || true
+            sleep 1
+        fi
+    fi
 
     if is_port_in_use $BACKEND_PORT; then
         local existing_pid
