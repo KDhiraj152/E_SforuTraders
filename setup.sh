@@ -108,6 +108,26 @@ APP_ENVIRONMENT=development
 EOF
 }
 
+ensure_env_key() {
+    local key="$1"
+    local value="$2"
+    if ! grep -Eq "^${key}=" "$ENV_FILE"; then
+        echo "${key}=${value}" >> "$ENV_FILE"
+        log_warn "Added missing ${key} to $ENV_FILE"
+    fi
+}
+
+ensure_existing_env_local_has_required_keys() {
+    # Compose interpolates variables for the whole file, even when starting one service.
+    # Keep older .env.local files compatible by filling in any missing required keys.
+    ensure_env_key "DB_USERNAME" "postgres"
+    ensure_env_key "DB_PASSWORD" "$(generate_token)"
+    ensure_env_key "JWT_SECRET" "$(generate_secret)"
+    ensure_env_key "APP_USERNAME" "local_admin"
+    ensure_env_key "APP_PASSWORD" "$(generate_token)"
+    ensure_env_key "ALLOWED_ORIGINS" "http://localhost:5173,http://localhost:3000"
+}
+
 # Check Java version
 check_java_version() {
     local java_version
@@ -168,6 +188,7 @@ setup_env_files() {
         log_success "Created $ENV_FILE with development defaults"
     else
         log_info "$ENV_FILE already exists, skipping"
+        ensure_existing_env_local_has_required_keys
     fi
 
     # Frontend .env.local
